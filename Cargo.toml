@@ -1,0 +1,21 @@
+[package]
+name = "core_bluetooth"
+version = "0.1.0"
+authors = ["Dmytro Lysai <d@emphased.net>"]
+description = "Safe API to CoreBluetooth"
+keywords = ["api", "bluetooth", "macos", "ios"]
+categories = ["api-bindings", "os::macos-apis"]
+repository = "https://github.com/pingw33n/rust_core_bluetooth"
+edition = "2018"
+license = "MIT/Apache-2.0"
+
+[dependencies]
+enumflags2 = "0.6"
+lazy_static = "1.4.0"
+log = "0.4.8"
+objc = "0.2.7"
+static_assertions = "1.1.0"
+
+[dev-dependencies]
+chrono = "0.4.11"
+env_logger = "0.7.1"
