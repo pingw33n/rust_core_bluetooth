@@ -69,7 +69,7 @@ impl Delegate {
 
     pub fn send(&self, event: CentralEvent) {
         if let Some(sender) = self.sender() {
-            let _ = sender.send(event);
+            let _ = sender.send_blocking(event);
         }
     }
 

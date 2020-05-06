@@ -1,26 +1,37 @@
 use log::*;
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::process::exit;
+
 use core_bluetooth::central::*;
-use core_bluetooth::ManagerState;
+use core_bluetooth::central::peripheral::Peripheral;
+use core_bluetooth::*;
+use core_bluetooth::uuid::Uuid;
 
-pub fn main() {
-    env_logger::init();
+const SERVICE: &str = "ebe0ccb0-7a0a-4b0c-8a1a-6ff2997da3a6";
+const CHARACTERISTIC: &str = "ebe0ccc1-7a0a-4b0c-8a1a-6ff2997da3a6";
 
-    let (central, events) = CentralManager::new();
+struct App {
+    central: CentralManager,
+    receiver: Receiver<CentralEvent>,
+    connected_peripherals: HashSet<Peripheral>,
+    uuid_to_short_id: HashMap<Uuid, u32>,
+    prev_short_id: u32,
+}
 
-    let mut connected_peripherals = HashSet::new();
+impl App {
+    fn new() -> Self {
+        let (central, receiver) = CentralManager::new();
+        Self {
+            central,
+            receiver,
+            connected_peripherals: HashSet::new(),
+            uuid_to_short_id: HashMap::new(),
+            prev_short_id: 0,
+        }
+    }
 
-    let mut short_id = 0;
-    let mut uuid_to_short_id = HashMap::new();
-    let mut shorten_uuid = |uuid| {
-        *uuid_to_short_id.entry(uuid).or_insert_with(|| { short_id += 1; short_id })
-    };
-
-    let service_uuid = "ebe0ccb0-7a0a-4b0c-8a1a-6ff2997da3a6".parse().unwrap();
-    let char_uuid = "ebe0ccc1-7a0a-4b0c-8a1a-6ff2997da3a6".parse().unwrap();
-
-    for event in events.iter() {
+    fn handle_event(&mut self, event: CentralEvent) {
         debug!("new event: {:#?}", event);
         match event {
             CentralEvent::ManagerStateChanged { new_state } => {
@@ -39,8 +50,8 @@ pub fn main() {
                     ManagerState::PoweredOn => {
                         info!("scanning for peripherals");
                         println!("Discovering Xiaomi sensors...");
-                        central.get_peripherals_with_services(&[service_uuid]);
-                        central.scan();
+                        self.central.get_peripherals_with_services(&[SERVICE.parse().unwrap()]);
+                        self.central.scan();
                     },
                     _ => {},
                 }
@@ -51,38 +62,38 @@ pub fn main() {
                 rssi,
             } => {
                 if advertisement_data.is_connectable() != Some(false) &&
-                    connected_peripherals.insert(peripheral.clone())
+                    self.connected_peripherals.insert(peripheral.clone())
                 {
                     info!("connecting to {} {} dB ({:?})",
                         peripheral.id(), rssi, advertisement_data.local_name());
-                    central.connect(&peripheral);
+                    self.central.connect(&peripheral);
                 }
             }
             CentralEvent::GetPeripheralsWithServicesResult { peripherals, tag: _ } => {
                 for p in peripherals {
-                    if connected_peripherals.insert(p.clone()) {
+                    if self.connected_peripherals.insert(p.clone()) {
                         debug!("connecting to {})", p.id());
-                        central.connect(&p);
+                        self.central.connect(&p);
                     }
                 }
             }
             CentralEvent::PeripheralConnected { peripheral } => {
-                peripheral.discover_services_with_uuids(&[service_uuid]);
+                peripheral.discover_services_with_uuids(&[SERVICE.parse().unwrap()]);
             }
             CentralEvent::PeripheralDisconnected { peripheral, error: _, } => {
-                connected_peripherals.remove(&peripheral);
+                self.connected_peripherals.remove(&peripheral);
                 debug!("re-connecting to {})", peripheral.id());
-                central.connect(&peripheral);
+                self.central.connect(&peripheral);
             }
             CentralEvent::PeripheralConnectFailed { peripheral, error } => {
                 warn!("failed to connect to peripheral {}: {}",
                     peripheral.id(), error.map(|e| e.to_string()).unwrap_or_else(|| "<no error>".into()));
-                central.connect(&peripheral);
+                self.central.connect(&peripheral);
             }
             CentralEvent::ServicesDiscovered { peripheral, services, } => {
                 if let Ok(services) = services {
                     for service in services {
-                        peripheral.discover_characteristics_with_uuids(&service, &[char_uuid]);
+                        peripheral.discover_characteristics_with_uuids(&service, &[CHARACTERISTIC.parse().unwrap()]);
                     }
                 }
             }
@@ -90,7 +101,7 @@ pub fn main() {
                 if result.is_err() {
                     error!("couldn't subscribe to characteristic of {}", peripheral.id());
                 } else {
-                    println!("Subscribed to {} (#{})", peripheral.id(), shorten_uuid(peripheral.id()));
+                    println!("Subscribed to {} (#{})", peripheral.id(), self.shorten_uuid(peripheral.id()));
                 }
             }
             CentralEvent::CharacteristicsDiscovered { peripheral, service: _, characteristics } => {
@@ -109,10 +120,44 @@ pub fn main() {
                     let t = i16::from_le_bytes([value[0], value[1]]) as f64 / 100.0;
                     let rh = value[2];
                     println!("{} #{}: t = {} C, rh = {}%",
-                        now, shorten_uuid(peripheral.id()), t, rh);
+                        now, self.shorten_uuid(peripheral.id()), t, rh);
                 }
             }
             _ => {}
         }
     }
+
+    fn shorten_uuid(&mut self, uuid: Uuid) -> u32 {
+        match self.uuid_to_short_id.entry(uuid) {
+            Entry::Occupied(e) => *e.get(),
+            Entry::Vacant(e) => {
+                self.prev_short_id += 1;
+                *e.insert(self.prev_short_id)
+            }
+        }
+    }
+
+    #[cfg(not(feature = "async_std_unstable"))]
+    fn run(mut self) {
+        debug!("running in std");
+        while let Ok(event) = self.receiver.recv() {
+            self.handle_event(event);
+        }
+    }
+
+    #[cfg(feature = "async_std_unstable")]
+    fn run(mut self) {
+        debug!("running in async_std");
+        async_std::task::block_on(async move {
+            while let Some(event) = self.receiver.recv().await {
+                self.handle_event(event);
+            }
+        })
+    }
+}
+
+pub fn main() {
+    env_logger::init();
+
+    App::new().run();
 }
