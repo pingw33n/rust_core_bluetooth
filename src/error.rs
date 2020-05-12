@@ -120,6 +120,8 @@ impl ErrorKind {
     }
 }
 
+/// The possible errors returned by a GATT server (a remote peripheral) during
+/// Bluetooth low energy ATT transactions.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum AttErrorKind {

@@ -27,118 +27,324 @@ use descriptor::Descriptor;
 use peripheral::*;
 use service::Service;
 
+/// Events that a central manager sends about changes in its state or state of its local or remote
+/// components.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum CentralEvent {
+    /// Indicates the peripheral discovered characteristics for a service.
+    ///
+    /// This event is triggered in response to the
+    /// [`discover_characteristics`](peripheral/struct.Peripheral.html#method.discover_characteristics)
+    /// method call.
     CharacteristicsDiscovered {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The service to which the characteristics belong.
         service: Service,
+
+        /// The discovered characteristics or error if the call failed.
         characteristics: Result<Vec<Characteristic>, Error>,
     },
 
+    /// Indicates that retrieving the specified characteristic’s value completed, or that the
+    /// characteristic’s value changed.
+    ///
+    /// This event is triggered in response to the
+    /// [`read_characteristic`](peripheral/struct.Peripheral.html#method.read_characteristic)
+    /// method call. A peripheral also invokes this method to notify about a change to the
+    /// value of the characteristic for which notifications were previously enabled by calling
+    /// [`subscribe`](peripheral/struct.Peripheral.html#method.subscribe) method.
     CharacteristicValue {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The characteristic containing the value.
         characteristic: Characteristic,
+
+        /// The value or error if the call failed.
         value: Result<Vec<u8>, Error>,
     },
 
+    /// Indicates the peripheral discovered descriptors for a characteristic.
+    ///
+    /// This event is triggered in response to the
+    /// [`discover_descriptors`](peripheral/struct.Peripheral.html#method.discover_descriptors)
+    /// method call.
     DescriptorsDiscovered {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The characteristic to which the descriptors belong.
         characteristic: Characteristic,
+
+        /// The discovered descriptors or error if the call failed.
         descriptors: Result<Vec<Descriptor>, Error>,
     },
 
+    /// Indicates that retrieving the specified characteristic descriptor’s value completed.
+    ///
+    /// This event is triggered in response to the
+    /// [`read_descriptor`](peripheral/struct.Peripheral.html#read_descriptor)
+    /// method call.
     DescriptorValue {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The descriptor containing the value.
         descriptor: Descriptor,
+
+        /// The value or error if the call failed.
         value: Result<Vec<u8>, Error>,
     },
 
+    /// Indicates that the [`get_max_write_len`](peripheral/struct.Peripheral.html#method.get_max_write_len)
+    /// method call completed.
     GetMaxWriteLenResult {
+        /// Maximum write length information.
         max_write_len: MaxWriteLen,
+
+        /// Optional tag specified by [`get_max_write_len_tagged`](peripheral/struct.Peripheral.html#method.get_max_write_len_tagged).
         tag: Option<Tag>,
     },
 
+    /// Indicates that the [`get_peripherals`](struct.CentralManager.html#method.get_peripherals)
+    /// method call completed.
     GetPeripheralsResult {
+        /// A list of peripherals that the central manager is able to match to the provided identifiers.
         peripherals: Vec<Peripheral>,
+
+        /// Optional tag specified by [`get_peripherals_tagged`](struct.CentralManager.html#method.get_peripherals_tagged).
         tag: Option<Tag>,
     },
 
+    /// Indicates that the [`get_peripherals_with_services`](struct.CentralManager.html#method.get_peripherals_with_services)
+    /// method call completed.
     GetPeripheralsWithServicesResult {
+        /// A list of the peripherals that are currently connected to the system and that contain
+        /// any of the services specified in the `service_uuids` parameter. This list can include
+        /// peripherals connected by other apps. You need to [connect](struct.CentralManager.html#method.connect)
+        /// them before use.
         peripherals: Vec<Peripheral>,
+
+        /// Optional tag specified by [`get_peripherals_with_services_tagged`](struct.CentralManager.html#method.get_peripherals_with_services_tagged).
         tag: Option<Tag>,
     },
 
+    /// Indicates that discovery of included services within the provided service completed.
     IncludedServicesDiscovered {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The service containing the discovered included services.
         service: Service,
+
+        /// The discovered included services or error if the call failed.
+        ///
+        /// This event is triggered in response to the
+        /// [`discover_included_services`](peripheral/struct.Peripheral.html#method.discover_included_services)
+        /// method call.
         included_services: Result<Vec<Service>, Error>,
     },
 
+    /// Indicates the central manager’s state updated.
+    ///
+    /// You handle this event to ensure that the central device supports Bluetooth low energy and
+    /// that it’s available to use. You should issue commands to the central manager only when the
+    /// central manager’s state indicates it’s powered on. A state with a value lower than
+    /// [PoweredOn](../enum.ManagerState.html#variant.PoweredOn) implies that scanning has stopped,
+    /// which in turn disconnects any previously-connected peripherals. If the state moves below
+    /// [PoweredOff](../enum.ManagerState.html#variant.PoweredOff), all
+    /// [`Peripheral`](peripheral/struct.Peripheral.html) objects obtained from this central manager
+    /// become invalid; you must retrieve or discover these peripherals again.
+    /// For a complete list of possible states, see the [ManagerState](../enum.ManagerState.html) enum.
     ManagerStateChanged {
+        /// Current state of the central manager.
         new_state: ManagerState,
     },
 
+    /// Indicates the central manager connected to the peripheral.
+    ///
+    /// This event is triggered when a call to [`connect`](struct.CentralManager.html#method.connect)
+    /// method succeeds.
     PeripheralConnected {
+        /// The now-connected peripheral.
         peripheral: Peripheral,
     },
 
+    /// Indicates the central manager failed to create a connection with the peripheral.
+    ///
+    /// This event is triggered when connection initiated with the
+    /// [`connect`](struct.CentralManager.html#method.connect) method fails to complete. Because connection
+    /// attempts don’t time out, a failed connection usually indicates a transient issue, in which
+    /// case you may attempt connecting to the peripheral again.
     PeripheralConnectFailed {
+        /// The peripheral that failed to connect.
         peripheral: Peripheral,
+
+        /// The cause of the failure, or `None` if no error occurred.
         error: Option<Error>,
     },
 
+    /// Indicates the central manager disconnected from a peripheral.
+    ///
+    /// This event is triggered when disconnecting a peripheral previously connected with the
+    /// [`connect`](struct.CentralManager.html#method.connect) method. The `error` contains the reason for
+    /// the disconnection, unless the disconnect resulted from a call to
+    /// [`disconnect`](struct.CentralManager.html#method.disconnect). After this event, no other event will be
+    /// received for the peripheral.
+    ///
+    /// All services, characteristics, and characteristic descriptors of the peripheral become
+    /// invalidated after it disconnects.
     PeripheralDisconnected {
+        /// The now-disconnected peripheral.
         peripheral: Peripheral,
+
+        /// The cause of the failure, or `None` if no error occurred.
         error: Option<Error>,
     },
 
+    /// Indicates the central manager discovered a peripheral while scanning for devices.
     PeripheralDiscovered {
+        /// The discovered peripheral.
         peripheral: Peripheral,
+
+        /// Peripheral's advertisment data.
         advertisement_data: AdvertisementData,
+
+        /// The current received signal strength indicator (RSSI) of the peripheral, in decibels.
+        ///
+        /// Use the RSSI data to determine the proximity of a discoverable peripheral device, and
+        /// whether you want to connect to it automatically.
         rssi: i32,
     },
 
+    /// Indicates that a peripheral is again ready to send characteristic updates.
+    ///
+    /// This event is triggered after a failed call to
+    /// [`write_characteristic`](peripheral/struct.Peripheral.html#method.write_characteristic),
+    /// once peripheral is ready to send characteristic value updates.
     PeripheralIsReadyToWriteWithoutResponse {
+        /// The peripheral providing this update.
         peripheral: Peripheral,
     },
 
+    /// Indicates that a peripheral’s name changed.
+    ///
+    /// This event is triggered whenever the peripheral’s Generic Access Profile (GAP) device name
+    /// changes. Since a peripheral device can change its GAP device name, you can handle this event
+    /// if you need to display the current name of the peripheral device.
     PeripheralNameChanged {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The peripheral's name.
         new_name: Option<String>,
     },
 
+    /// Indicates that retrieving the value of the peripheral’s current Received Signal Strength
+    /// Indicator (RSSI) completed.
+    ///
+    /// This event is triggered in response to
+    /// [`read_rssi`](peripheral/struct.Peripheral.html#method.read_rssi),
+    /// method call.
     ReadRssiResult {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The RSSI, in decibels, or error if the call failed.
         rssi: Result<i32, Error>,
     },
 
+    /// Indicates that a peripheral’s services changed.
+    ///
+    /// This event is triggered whenever one or more services of a peripheral change. A peripheral’s
+    /// services have changed if:
+    ///
+    /// * The peripheral removes a service from its database.
+    /// * The peripheral adds a new service to its database.
+    /// * The peripheral adds back a previously-removed service, but at a different location in the
+    ///   database.
+    ///
+    /// The `invalidated_services` includes any changed services that you previously discovered;
+    /// you can no longer use these services. You can use the
+    /// [`discover_services`](peripheral/struct.Peripheral.html#method.discover_services) method to
+    /// discover any new services that the peripheral added to its database.
+    /// Use this same method to find out whether any of the invalidated services that you were using
+    /// (and want to continue using) now have a different location in the peripheral’s database.
     ServicesChanged {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// A list of services after the change. Note, this doesn't include newly added services.
         services: Vec<Service>,
+
+        /// A list of services invalidated by this change.
         invalidated_services: Vec<Service>,
     },
 
+    /// Peripheral service discovery succeeded.
+    ///
+    /// This event is triggered in response to the
+    /// [`discover_services`](peripheral/struct.Peripheral.html#method.discover_services)
+    /// method call.
     ServicesDiscovered {
+        /// The peripheral to which the `services` belong.
         peripheral: Peripheral,
+
+        /// The discovered services or error if the call failed.
         services: Result<Vec<Service>, Error>,
     },
 
-    SubscriptionChanged {
+    /// Indicates the peripheral received a request to start or stop providing notifications for a
+    /// specified characteristic’s value.
+    ///
+    /// This event is triggered in response to the
+    /// [`subscribe`](peripheral/struct.Peripheral.html#method.subscribe) or
+    /// [`unsubscribe`](peripheral/struct.Peripheral.html#method.unsubscribe)
+    /// methods call.
+    SubscriptionChangeResult {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The characteristic for which to configure value notifications.
         characteristic: Characteristic,
+
+        /// Whether the subscription change succeeded.
         result: Result<(), Error>,
     },
 
+    /// Characteristic value write completed.
+    ///
+    /// This event is triggered in response to the
+    /// [`write_characteristic`](peripheral/struct.Peripheral.html#method.write_characteristic)
+    /// method called with [`WithResponse`](characteristic/enum.WriteKind.html#variant.WithResponse)
+    /// as the `kind` parameter.
     WriteCharacteristicResult {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The target characteristic.
         characteristic: Characteristic,
+
+        /// Whether the write succeeded.
         result: Result<(), Error>,
     },
 
+    /// Characteristic descriptor's value write completed.
+    ///
+    /// This event is triggered in response to the
+    /// [`write_descriptor`](peripheral/struct.Peripheral.html#method.write_descriptor)
+    /// method call.
     WriteDescriptorResult {
+        /// The peripheral providing this information.
         peripheral: Peripheral,
+
+        /// The target descriptor.
         descriptor: Descriptor,
+
+        /// Whether the write succeeded.
         result: Result<(), Error>,
     },
 }
@@ -146,29 +352,7 @@ pub enum CentralEvent {
 assert_impl_all!(CentralEvent: Send);
 assert_not_impl_any!(CentralEvent: Sync);
 
-pub struct CentralManagerBuilder {
-    show_power_alert: bool,
-}
-
-impl CentralManagerBuilder {
-    pub fn new() -> Self {
-        Self {
-            show_power_alert: false,
-        }
-    }
-
-    pub fn show_power_alert_alert(&mut self, v: bool) -> &mut Self {
-        self.show_power_alert = v;
-        self
-    }
-
-    pub fn build(&self) -> (CentralManager, sync::Receiver<CentralEvent>) {
-        CentralManager::build(self)
-    }
-}
-
-assert_impl_all!(CentralManagerBuilder: Send, Sync);
-
+/// Peripheral scanning options accepted by [`scan_with_options`](struct.CentralManager.html#method.scan_with_options).
 #[derive(Default)]
 pub struct ScanOptions {
     allow_duplicates: bool,
@@ -177,12 +361,21 @@ pub struct ScanOptions {
 }
 
 impl ScanOptions {
+    /// Specifies whether the scan should run without duplicate filtering.
+    ///
+    /// If `true`, the central disables filtering and generates a discovery event each time it
+    /// receives an advertising packet from the peripheral. If `false` (the default), the central
+    /// coalesces multiple discoveries of the same peripheral into a single discovery event.
+    ///
+    /// Disabling this filtering can have an adverse effect on battery life; use it only if necessary.
     pub fn allow_duplicates(mut self, v: bool) -> Self {
         self.allow_duplicates = v;
         self
     }
 
-    pub fn services(mut self, uuids: &[Uuid]) -> Self {
+    /// Specifies services UUIDs making the central manager return only peripherals that advertise
+    /// these services.
+    pub fn include_services(mut self, uuids: &[Uuid]) -> Self {
         if self.service_cbuuids.is_none() {
             self.service_cbuuids = Some(NSArray::with_capacity(uuids.len()).retain());
         }
@@ -192,7 +385,9 @@ impl ScanOptions {
         self
     }
 
-    pub fn solicited_services(mut self, uuids: &[Uuid]) -> Self {
+    /// Specifying this scan option causes the central manager to also scan for peripherals
+    /// soliciting any of the services contained in the array.
+    pub fn include_solicited_services(mut self, uuids: &[Uuid]) -> Self {
         if self.solicited_service_cbuuids.is_none() {
             self.solicited_service_cbuuids = Some(NSArray::with_capacity(uuids.len()).retain());
         }
@@ -214,31 +409,6 @@ impl ScanOptions {
 
 assert_impl_all!(ScanOptions: Send, Sync);
 
-#[derive(Default)]
-pub struct ConnectOptions {
-    notify_on_connection: bool,
-    notify_on_disconnection: bool,
-    notify_on_notification: bool,
-    start_delay_seconds: u32,
-}
-
-impl ConnectOptions {
-    fn to_options_dict(&self) -> NSDictionary {
-        let dict = NSDictionary::with_capacity(6);
-        dict.insert(unsafe { CBConnectPeripheralOptionNotifyOnConnectionKey },
-            NSNumber::new_bool(self.notify_on_connection));
-        dict.insert(unsafe { CBConnectPeripheralOptionNotifyOnDisconnectionKey },
-            NSNumber::new_bool(self.notify_on_disconnection));
-        dict.insert(unsafe { CBConnectPeripheralOptionNotifyOnNotificationKey },
-            NSNumber::new_bool(self.notify_on_notification));
-        dict.insert(unsafe { CBConnectPeripheralOptionStartDelayKey },
-            NSNumber::new_u32(self.start_delay_seconds));
-        dict
-    }
-}
-
-assert_impl_all!(ConnectOptions: Send, Sync);
-
 struct Inner {
     manager: StrongPtr<CBCentralManager>,
 }
@@ -251,6 +421,12 @@ impl Drop for Inner {
     }
 }
 
+/// An object that scans for, discovers, connects to, and manages peripherals.
+///
+/// Before calling the `CentralManager` methods,
+/// [`ManagerStateChanged`](enum.CentralEvent.html#variant.ManagerStateChanged)
+/// event must be received indicating the [PoweredOn](../enum.ManagerState.html#variant.PoweredOn)
+/// state.
 #[derive(Clone)]
 // TODO The only reason why Arc is needed here is that we need to cleanup Delegate resources.
 // Unfortunately objc lib can't replace methods.
@@ -261,30 +437,50 @@ assert_impl_all!(CentralManager: Send, Sync);
 impl CentralManager {
     pub fn new() -> (Self, sync::Receiver<CentralEvent>) {
         objc::rc::autoreleasepool(|| {
-            CentralManagerBuilder::new().build()
+            let (manager, recv) = CBCentralManager::new(false);
+            (Self(Arc::new(Inner {
+                manager,
+            })), recv)
         })
     }
 
+    /// Returns a list of known peripherals by their identifiers. The result is returned as
+    /// [`GetPeripheralsWithServicesResult`](enum.CentralEvent.html#variant.GetPeripheralsWithServicesResult).
     pub fn get_peripherals(&self, uuids: &[Uuid]) {
         self.get_peripherals_tagged0(uuids, None);
     }
 
+    /// Allows tagging an asynchronous [`get_peripherals`](struct.CentralManager.html#method.get_peripherals)
+    /// call with arbitrary `tag`.
     pub fn get_peripherals_tagged(&self, uuids: &[Uuid], tag: Tag) {
         self.get_peripherals_tagged0(uuids, Some(tag))
     }
 
+    /// Retrieves a list of the peripherals connected to the system whose services match
+    /// the specified `services_uuids`. The result is returned as
+    /// [`GetPeripheralsWithServicesResult`](enum.CentralEvent.html#variant.GetPeripheralsWithServicesResult).
     pub fn get_peripherals_with_services(&self, services_uuids: &[Uuid]) {
         self.get_peripherals_with_services_tagged0(services_uuids, None);
     }
 
+    /// Allows tagging an asynchronous [`get_peripherals_with_services`](struct.CentralManager.html#method.get_peripherals_with_services)
+    /// call with arbitrary `tag`.
     pub fn get_peripherals_with_services_tagged(&self, services_uuids: &[Uuid], tag: Tag) {
         self.get_peripherals_with_services_tagged0(services_uuids, Some(tag));
     }
 
+    /// Scans for peripherals with default options.
+    /// See [`scan_with_options`](struct.CentralManager.html#method.scan_with_options).
     pub fn scan(&self) {
         self.scan_with_options(Default::default());
     }
 
+    /// Scans for peripherals that are advertising services with the specified `options`.
+    ///
+    /// If the central manager is actively scanning with one set of parameters and it receives
+    /// another set to scan, the new parameters override the previous set. When the central manager
+    /// discovers a peripheral, it triggers
+    /// [`PeripheralDiscovered`](enum.CentralEvent.html#variant.PeripheralDiscovered) event.
     pub fn scan_with_options(&self, options: ScanOptions) {
         objc::rc::autoreleasepool(|| {
             command::Scan {
@@ -303,21 +499,33 @@ impl CentralManager {
         })
     }
 
+    /// Establishes a local connection to the `peripheral`.
+    ///
+    /// After successfully establishing a local connection to a peripheral, the central manager
+    /// object triggers [`PeripheralConnected`](enum.CentralEvent.html#variant.PeripheralConnected)
+    /// event. If the connection attempt fails, the central manager object calls the
+    /// [`PeripheralConnectFailed`](enum.CentralEvent.html#variant.PeripheralConnectFailed) instead.
+    /// Attempts to connect to a peripheral don’t time out. To explicitly cancel a pending
+    /// connection to a peripheral, call the
+    /// [`cancel_connect`](struct.CentralManager.html#method.cancel_connect) method.
+    /// Dropping the `Peripheral` also implicitly cancels connection.
     pub fn connect(&self, peripheral: &Peripheral) {
-        self.connect_with_options(peripheral, Default::default());
-    }
-
-    pub fn connect_with_options(&self, peripheral: &Peripheral, options: ConnectOptions) {
         objc::rc::autoreleasepool(|| {
             command::Connect {
                 manager: self.0.manager.clone(),
                 peripheral: peripheral.peripheral.clone(),
-                options,
             }.dispatch()
         })
     }
 
     /// Cancels an active or pending local connection to a peripheral.
+    ///
+    /// This method is nonblocking, and any other commands that are still pending to peripheral may
+    /// not complete. Because other apps may still have a connection to the peripheral, canceling a
+    /// local connection doesn’t guarantee that the underlying physical link is immediately
+    /// disconnected. From the app’s perspective, however, the peripheral is effectively
+    /// disconnected, and the central manager object trigger
+    /// [`PeripheralDisconnected`](enum.CentralEvent.html#variant.PeripheralDisconnected) event.
     pub fn cancel_connect(&self, peripheral: &Peripheral) {
         objc::rc::autoreleasepool(|| {
             command::CancelConnect {
@@ -347,13 +555,6 @@ impl CentralManager {
                 tag,
             }.get_peripherals_with_services()
         })
-    }
-
-    fn build(b: &CentralManagerBuilder) -> (Self, sync::Receiver<CentralEvent>) {
-        let (manager, recv) = CBCentralManager::new(b.show_power_alert);
-        (Self(Arc::new(Inner {
-            manager,
-        })), recv)
     }
 }
 
@@ -412,10 +613,9 @@ impl CBCentralManager {
         }
     }
 
-    fn connect(&self, peripheral: &CBPeripheral, options: &ConnectOptions) {
-        let options = options.to_options_dict();
+    fn connect(&self, peripheral: &CBPeripheral) {
         unsafe {
-            let _: () = msg_send![self.as_ptr(), connectPeripheral:peripheral.as_ptr() options:options];
+            let _: () = msg_send![self.as_ptr(), connectPeripheral:peripheral.as_ptr() options:nil];
         }
     }
 
@@ -448,6 +648,7 @@ impl CBCentralManager {
     }
 }
 
+/// Peripheral's advertisement data.
 #[derive(Clone, Debug)]
 pub struct AdvertisementData {
     connectable: Option<bool>,
@@ -457,7 +658,6 @@ pub struct AdvertisementData {
     service_uuids: Vec<Uuid>,
     solicited_service_uuids: Vec<Uuid>,
     overflow_service_uuids: Vec<Uuid>,
-    // TODO what is the type exactly?
     tx_power_level: Option<i32>,
 }
 
@@ -579,5 +779,3 @@ impl ServiceData {
         self.0.iter().map(|(k, v)| (*k, v.as_slice()))
     }
 }
-
-

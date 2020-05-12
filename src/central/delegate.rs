@@ -371,7 +371,7 @@ impl Delegate {
             let peripheral = Peripheral::retain(peripheral);
             let characteristic = Characteristic::retain(characteristic);
             let result = result(NSError::wrap_nullable(error), || {});
-            this.send(CentralEvent::SubscriptionChanged {
+            this.send(CentralEvent::SubscriptionChangeResult {
                 peripheral,
                 characteristic,
                 result,

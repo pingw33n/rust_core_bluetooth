@@ -27,10 +27,6 @@ extern {
     pub(in crate) static CBCentralManagerScanOptionAllowDuplicatesKey: NSString;
     pub(in crate) static CBCentralManagerScanOptionSolicitedServiceUUIDsKey: NSString;
     pub(in crate) static CBCentralManagerOptionShowPowerAlertKey: NSString;
-    pub(in crate) static CBConnectPeripheralOptionNotifyOnConnectionKey: NSString;
-    pub(in crate) static CBConnectPeripheralOptionNotifyOnDisconnectionKey: NSString;
-    pub(in crate) static CBConnectPeripheralOptionNotifyOnNotificationKey: NSString;
-    pub(in crate) static CBConnectPeripheralOptionStartDelayKey: NSString;
     pub(in crate) static CBErrorDomain: NSString;
     pub(in crate) static CBATTErrorDomain: NSString;
 }
@@ -144,13 +140,6 @@ impl NSNumber {
     pub fn new_bool(value: bool) -> Self {
         unsafe {
             let r: *mut Object = msg_send![class!(NSNumber), numberWithBool:value];
-            Self::wrap(r)
-        }
-    }
-
-    pub fn new_u32(value: u32) -> Self {
-        unsafe {
-            let r: *mut Object = msg_send![class!(NSNumber), numberWithUnsignedInt:value];
             Self::wrap(r)
         }
     }

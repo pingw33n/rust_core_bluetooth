@@ -1,34 +1,10 @@
 use super::*;
 use crate::central::characteristic::Characteristic;
 
-object_ptr_wrapper!(CBService);
-
-impl CBService {
-    pub fn id(&self) -> Uuid {
-        unsafe {
-            let r: *mut Object = msg_send![self.as_ptr(), UUID];
-            CBUUID::wrap(r).to_uuid()
-        }
-    }
-
-    pub fn is_primary(&self) -> bool {
-        unsafe {
-            let r: bool = msg_send![self.as_ptr(), isPrimary];
-            r
-        }
-    }
-
-    pub fn characteristics(&self) -> Option<Vec<Characteristic>> {
-        let arr = unsafe {
-            let r: *mut Object = msg_send![self.as_ptr(), characteristics];
-            NSArray::wrap_nullable(r)?
-        };
-        Some(arr.iter()
-            .map(|v| unsafe { Characteristic::retain(v) })
-            .collect())
-    }
-}
-
+/// A collection of data and associated behaviors that accomplish a function or feature of a device.
+///
+/// Services are either primary or secondary and may contain multiple characteristics or included
+/// services (references to other services).
 #[derive(Clone, Debug)]
 pub struct Service {
     id: Uuid,
@@ -75,5 +51,33 @@ impl Eq for Service {}
 impl std::hash::Hash for Service {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write(&self.id)
+    }
+}
+
+object_ptr_wrapper!(CBService);
+
+impl CBService {
+    pub fn id(&self) -> Uuid {
+        unsafe {
+            let r: *mut Object = msg_send![self.as_ptr(), UUID];
+            CBUUID::wrap(r).to_uuid()
+        }
+    }
+
+    pub fn is_primary(&self) -> bool {
+        unsafe {
+            let r: bool = msg_send![self.as_ptr(), isPrimary];
+            r
+        }
+    }
+
+    pub fn characteristics(&self) -> Option<Vec<Characteristic>> {
+        let arr = unsafe {
+            let r: *mut Object = msg_send![self.as_ptr(), characteristics];
+            NSArray::wrap_nullable(r)?
+        };
+        Some(arr.iter()
+            .map(|v| unsafe { Characteristic::retain(v) })
+            .collect())
     }
 }

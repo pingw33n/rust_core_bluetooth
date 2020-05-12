@@ -97,7 +97,7 @@ impl App {
                     }
                 }
             }
-            CentralEvent::SubscriptionChanged { peripheral, characteristic: _, result } => {
+            CentralEvent::SubscriptionChangeResult { peripheral, characteristic: _, result } => {
                 if result.is_err() {
                     error!("couldn't subscribe to characteristic of {}", peripheral.id());
                 } else {

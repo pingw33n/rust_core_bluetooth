@@ -26,6 +26,7 @@ enum Property {
     IndicateEncryptionRequired      = 0x200
 }
 
+/// Properties of a characteristic.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Properties(BitFlags<Property>);
 
@@ -50,28 +51,28 @@ macro_rules! properties {
 
 properties!(
     #[doc="Characteristic can broadcast its value using a characteristic configuration descriptor."]
-    is_broadcast => Broadcast,
+    can_broadcast => Broadcast,
 
     #[doc="A peripheral can read the characteristic’s value."]
-    is_read => Read,
+    can_read => Read,
 
     #[doc="A peripheral can write the characteristic’s value, without a response to indicate that the write succeeded."]
-    is_write_without_response => WriteWithoutResponse,
+    can_write_without_response => WriteWithoutResponse,
 
     #[doc="A peripheral can write the characteristic’s value, with a response to indicate that the write succeeded."]
-    is_write => Write,
+    can_write => Write,
 
     #[doc="The peripheral permits notifications of the characteristic’s value, without a response from the central to indicate receipt of the notification."]
-    is_notify => Notify,
+    can_notify => Notify,
 
     #[doc="The peripheral permits notifications of the characteristic’s value, with a response from the central to indicate receipt of the notification."]
-    is_indicate => Indicate,
+    can_indicate => Indicate,
 
     #[doc="The peripheral allows signed writes of the characteristic’s value, without a response to indicate the write succeeded."]
-    is_authenticated_signed_writes => AuthenticatedSignedWrites,
+    supports_authenticated_signed_writes => AuthenticatedSignedWrites,
 
     #[doc="The characteristic defines additional properties in the extended properties descriptor."]
-    is_extended_properties => ExtendedProperties,
+    has_extended_properties => ExtendedProperties,
 
     #[doc="Whether only trusted devices can enable notifications of the characteristic’s value."]
     is_notify_encryption_required => NotifyEncryptionRequired,
@@ -90,6 +91,20 @@ impl fmt::Debug for Properties {
     }
 }
 
+/// A characteristic of a remote peripheral’s service.
+///
+/// Represents further information about a peripheral's service. A characteristic contains a single
+/// value and any number of descriptors describing that value. The [`properties`](#method.properties)
+/// of a characteristic determine how you can use a characteristic’s value, and how you access the
+/// descriptors.
+///
+/// Readable characteristic can be read directly using
+/// [`read_characteristic`](../peripheral/struct.Peripheral.html#method.read_characteristic) method
+/// or by subscribing to it with [`subscribe`](../peripheral/struct.Peripheral.html#method.subscribe)
+/// method.
+///
+/// Writable characteristic can be written with
+/// [`write_characteristic`](../peripheral/struct.Peripheral.html#method.write_characteristic) method.
 #[derive(Clone, Debug)]
 pub struct Characteristic {
     id: Uuid,

@@ -145,14 +145,13 @@ impl_via_manager! { Scan =>
 pub struct Connect {
     pub(in super) manager: StrongPtr<CBCentralManager>,
     pub(in super) peripheral: StrongPtr<CBPeripheral>,
-    pub(in super) options: ConnectOptions,
 }
 
 impl Command for Connect {}
 
 impl_via_manager! { Connect =>
     dispatch(ctx) {
-        ctx.manager.connect(&ctx.peripheral, &ctx.options);
+        ctx.manager.connect(&ctx.peripheral);
     }
 }
 
@@ -173,17 +172,20 @@ impl_via_peripheral! { DiscoverServices =>
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-pub struct DiscoverCharacteristics {
+pub struct PeripheralServiceUuids {
     pub(in super) peripheral: StrongPtr<CBPeripheral>,
     pub(in super) service: StrongPtr<CBService>,
     pub(in super) uuids: Option<StrongPtr<NSArray>>,
 }
 
-impl Command for DiscoverCharacteristics {}
+impl Command for PeripheralServiceUuids {}
 
-impl_via_peripheral! { DiscoverCharacteristics =>
-    dispatch(ctx) {
+impl_via_peripheral! { PeripheralServiceUuids =>
+    discover_characteristics(ctx) {
         ctx.peripheral.discover_characteristics(*ctx.service, ctx.uuids.as_ref().map(|v| **v));
+    }
+    discover_included_services(ctx) {
+        ctx.peripheral.discover_included_services(*ctx.service, ctx.uuids.as_ref().map(|v| **v));
     }
 }
 

@@ -11,6 +11,7 @@ mod imp {
         }
     }
 
+    /// Receiving end of channel.
     pub type Receiver<T> = mpsc::Receiver<T>;
 
     pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
@@ -35,6 +36,7 @@ mod imp {
         }
     }
 
+    /// Receiving end of channel.
     pub type Receiver<T> = sync::Receiver<T>;
 
     pub fn channel<T>() -> (Sender<T>, Receiver<T>) {

@@ -1,5 +1,11 @@
 use super::*;
 
+/// An object that provides further information about a remote peripheral’s characteristic.
+///
+/// Descriptors provide further information about a characteristic’s value. For example, they may
+/// describe the value in human-readable form and describe how to format the value for presentation
+/// purposes. Characteristic descriptors also indicate whether a characteristic’s value indicates or
+/// notifies a client (a central) when the value of the characteristic changes.
 #[derive(Clone, Debug)]
 pub struct Descriptor {
     id: Uuid,

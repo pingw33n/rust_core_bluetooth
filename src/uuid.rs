@@ -9,22 +9,32 @@ use std::str::FromStr;
 
 const BASE_UUID_BYTES: [u8; 16] = [0, 0, 0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0x80, 0x5F, 0x9B, 0x34, 0xFB];
 
+/// Bluetooth-tailored UUID.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Uuid([u8; 16]);
 
 impl Uuid {
+    /// Returns UUID with all bytes set to zero.
     pub const fn zeroed() -> Self {
         Self([0; 16])
     }
 
+    /// Returns the Base UUID (`00000000-0000-1000-8000-00805F9B34FB`) as defined by the specs.
     pub const fn base() -> Self {
         Self(BASE_UUID_BYTES)
     }
 
+    /// Constructs instance from the specified bytes.
     pub const fn from_bytes(bytes: [u8; 16]) -> Self {
         Self(bytes)
     }
 
+    /// Constructs instance from the specified slice of variable length.
+    /// The supported lengths are 2 for `uuid16`, 4 for `uuid32` and 16 for a standard UUID.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `bytes` length is not 2, 4 or 16.
     pub fn from_slice(bytes: &[u8]) -> Self {
         Self(match bytes.len() {
             2 => {
@@ -50,10 +60,12 @@ impl Uuid {
         })
     }
 
+    /// Returns inner bytes array.
     pub fn bytes(&self) -> [u8; 16] {
         self.0
     }
 
+    /// Returns the shortest possible UUID that is equivalent of this UUID.
     pub fn shorten(&self) -> &[u8] {
         if self.0[4..] == BASE_UUID_BYTES[4..] {
             if self.0[0..2] == BASE_UUID_BYTES[0..2] {
