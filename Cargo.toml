@@ -2,10 +2,12 @@
 name = "core_bluetooth"
 version = "0.1.0"
 authors = ["Dmytro Lysai <d@emphased.net>"]
-description = "Safe API to CoreBluetooth"
+description = "Safe API wrapper for Core Bluetooth framework"
 keywords = ["api", "bluetooth", "macos", "ios"]
 categories = ["api-bindings", "os::macos-apis"]
 repository = "https://github.com/pingw33n/rust_core_bluetooth"
+documentation = "https://docs.rs/core_bluetooth"
+readme = "README.md"
 edition = "2018"
 license = "MIT/Apache-2.0"
 
